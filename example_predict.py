@@ -6,7 +6,7 @@ config = bert.Config(dataset='THUCNews')
 
 prediction = Prediction(config)
 
-sentences = ['野兽用纪录打爆第二中锋 掘金版三巨头已巍然成型']  # * 128
+sentences = ['野兽用纪录打爆第二中锋 掘金版三巨头已巍然成型', '56所高校预估2009年湖北录取分数线出炉']
 
 predict_label, score = prediction.predict(sentences)
 print("predict label:")
