@@ -117,11 +117,3 @@ def get_time_dif(start_time):
     end_time = time.time()
     time_dif = end_time - start_time
     return timedelta(seconds=int(round(time_dif)))
-
-
-def print2log(msg, logfile):
-    print(msg)
-    if logfile is None:
-        return
-    with open(logfile, 'a') as f:
-        print(msg, file=f, flush=True)

@@ -5,11 +5,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn import metrics
 import time
-import datetime
 
-from .utils import get_time_dif, print2log, build_dataset, build_iterator, build_data_for_predict
+from .utils import get_time_dif, build_dataset, build_iterator, build_data_for_predict
 from pybert.pytorch_pretrained import BertAdam
 from pybert.models import bert
+import datetime
 
 
 # 权重初始化，默认xavier
@@ -50,7 +50,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
     flag = False  # 记录是否很久没有效果提升
     model.train()
     for epoch in range(config.num_epochs):
-        print2log('Epoch [{}/{}]'.format(epoch + 1, config.num_epochs), logfile=config.logfile)
+        config.logger.info('Epoch [{}/{}]'.format(epoch + 1, config.num_epochs))
         for i, (trains, labels) in enumerate(train_iter):
             outputs = model(trains)
             model.zero_grad()
@@ -71,14 +71,15 @@ def train(config, model, train_iter, dev_iter, test_iter):
                 else:
                     improve = ''
                 time_dif = get_time_dif(start_time)
-                msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}' \
-                    .format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, time_dif, improve)
-                print2log(msg, config.logfile)
+                config.logger.info(
+                    'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}' \
+                        .format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, time_dif, improve)
+                )
                 model.train()
             total_batch += 1
             if total_batch - last_improve > config.require_improvement:
                 # 验证集loss超过1000batch没下降，结束训练
-                print2log("No optimization for a long time, auto-stopping...", config.logfile)
+                config.logger.info("No optimization for a long time, auto-stopping...")
                 flag = True
                 break
         if flag:
@@ -92,13 +93,13 @@ def test(config, model, test_iter):
     start_time = time.time()
     test_acc, test_loss, test_report, test_confusion = evaluate(config, model, test_iter, test=True)
 
-    print2log('Test Loss: {0:>5.2},  Test Acc: {1:>6.2%}'.format(test_loss, test_acc), config.logfile)
-    print2log("Precision, Recall and F1-Score...", config.logfile)
-    print2log(test_report, config.logfile)
-    print2log("Confusion Matrix...", config.logfile)
-    print2log(test_confusion, config.logfile)
+    config.logger.info('Test Loss: {0:>5.2},  Test Acc: {1:>6.2%}'.format(test_loss, test_acc))
+    config.logger.info("Precision, Recall and F1-Score...")
+    config.logger.info(test_report)
+    config.logger.info("Confusion Matrix...")
+    config.logger.info(test_confusion)
     time_dif = get_time_dif(start_time)
-    print2log("Time usage:{}".format(time_dif), config.logfile)
+    config.logger.info("Time usage:{}".format(time_dif))
 
 
 def evaluate(config, model, data_iter, test=False):
@@ -131,20 +132,18 @@ def load_and_train(config):
     torch.backends.cudnn.deterministic = True  # 保证每次结果一样
 
     start_time = time.time()
-    print2log("Training starts at {}".format(datetime.datetime.now()), config.logfile)
-    print2log("Loading data...", config.logfile)
+    config.logger.info("Train starts {}".format(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    config.logger.info("Loading data...{}".format(config.train_path))
     train_data, dev_data, test_data = build_dataset(config)
     train_iter = build_iterator(train_data, config)
     dev_iter = build_iterator(dev_data, config)
     test_iter = build_iterator(test_data, config)
     time_dif = get_time_dif(start_time)
-    print2log("Loading data...", config.logfile)
-
-    print2log("Time usage Loading Data: {}".format(time_dif), config.logfile)
+    config.logger.info("Time usage Loading Data: {}".format(time_dif))
 
     # train
     model = bert.Model(config).to(config.device)
-    print2log("Pretrained model loaded, train start...", config.logfile)
+    config.logger.info("Pretrained model loaded, train start...")
     train(config, model, train_iter, dev_iter, test_iter)
 
 

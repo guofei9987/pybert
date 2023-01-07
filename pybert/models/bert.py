@@ -3,30 +3,46 @@ import torch
 import torch.nn as nn
 # from pybert.pytorch_pretrained.pytorch_pretrained import BertModel, BertTokenizer
 from ..pytorch_pretrained import BertModel, BertTokenizer
+import logging4
+import sys
 
 
 class Config(object):
     """配置参数"""
 
     def __init__(self, dataset, logfile='log.txt'):
-        self.logfile = logfile  # 日志文件
         self.model_name = 'bert'
-        self.train_path = dataset + '/data/train.txt'                                # 训练集
-        self.dev_path = dataset + '/data/dev.txt'                                    # 验证集
-        self.test_path = dataset + '/data/test.txt'                                  # 测试集
+        self.train_path = dataset + '/data/train.txt'  # 训练集
+        self.dev_path = dataset + '/data/dev.txt'  # 验证集
+        self.test_path = dataset + '/data/test.txt'  # 测试集
         self.class_list = [x.strip() for x in open(
-            dataset + '/data/class.txt').readlines()]                                # 类别名单
-        self.save_path = dataset + '/saved_dict/' + self.model_name + '.ckpt'        # 模型训练结果
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   # 设备
-        self.require_improvement = 1000                                 # 若超过1000batch效果还没提升，则提前结束训练
-        self.num_classes = len(self.class_list)                         # 类别数
-        self.num_epochs = 3                                             # epoch数
-        self.batch_size = 128                                           # mini-batch大小
-        self.pad_size = 32                                              # 每句话处理成的长度(短填长切)
-        self.learning_rate = 5e-5                                       # 学习率
+            dataset + '/data/class.txt').readlines()]  # 类别名单
+        self.save_path = dataset + '/saved_dict/' + self.model_name + '.ckpt'  # 模型训练结果
+        self.require_improvement = 1000  # 若超过1000batch效果还没提升，则提前结束训练
+        self.num_classes = len(self.class_list)  # 类别数
+        self.num_epochs = 3  # epoch数
+        self.batch_size = 128  # mini-batch大小
+        self.pad_size = 32  # 每句话处理成的长度(短填长切)
+        self.learning_rate = 5e-5  # 学习率
         self.bert_path = './bert_pretrain'
         self.tokenizer = BertTokenizer.from_pretrained(self.bert_path)
         self.hidden_size = 768
+
+        self.logger = None
+        self.set_logger(logfile)
+
+        self.device = None
+        self.set_device()
+
+    def set_logger(self, logfile):
+        logger = logging4.Logger(name='Bert')
+        logger.add_channel(filename='log.txt', level=logging4.INFO)
+        logger.add_channel(filename=sys.stdout, level=logging4.INFO)
+        self.logger = logger
+
+    def set_device(self):
+        print('可用GPU的数量：', torch.cuda.device_count())
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # 设备
 
 
 class Model(nn.Module):
